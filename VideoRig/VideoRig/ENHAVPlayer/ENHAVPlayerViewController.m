@@ -716,12 +716,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
     CMTime duration = [self.player.currentItem duration];
     if (CMTIME_IS_VALID(duration) && !CMTIME_IS_INDEFINITE(duration) && !self.periodicTimeObserver)
     {
-      CGFloat width = self.view.bounds.size.width;
-      if ([self.playerControlsView playbackPositionSlider])
-      {
-        width = self.playerControlsView.playbackPositionSlider.bounds.size.width;
-      }
-      Float64 tolerance = 0.5f * CMTimeGetSeconds(duration) / width;
+      Float64 tolerance = 0.5f;
       __weak __typeof(self)weakSelf = self;
       self.periodicTimeObserver = [self.player addPeriodicTimeObserverForInterval:CMTimeMakeWithSeconds(tolerance, NSEC_PER_SEC)
                                                                             queue:NULL
