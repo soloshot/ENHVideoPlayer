@@ -611,7 +611,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   [self removePeriodicTimeObserver];
 }
 
--(IBAction)playbackSliderValueChanged:(UISlider *)sender
+-(IBAction)playbackSliderEnd:(UISlider *)sender
 {
   if (![self isSeekInProgress])
   {
@@ -643,10 +643,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
             }];
     }
   }
-}
-
--(IBAction)playbackSliderEnd:(id)sender
-{
+  
   if (!self.periodicTimeObserver)
   {
     [self addPeriodicTimeObserver];
@@ -750,18 +747,18 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
                   keyPath:NSStringFromSelector(@selector(currentItem))
                   options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld)
                    action:@selector(playerCurrentItemDidChange:)];
-
+  
   [_KVOController observe:self.player
                   keyPath:NSStringFromSelector(@selector(status))
                   options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
                    action: @selector(playerStatusDidChange:)];
   
-
+  
   [_KVOController observe:self.player
                   keyPath:@"externalPlaybackActive"
                   options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
                    action: @selector(playerExternalPlaybackStateDidChange:)];
-
+  
   NSString *currentItemStatusKeypath = [NSString stringWithFormat:@"%@.%@",
                                         NSStringFromSelector(@selector(currentItem)),
                                         NSStringFromSelector(@selector(status))];
