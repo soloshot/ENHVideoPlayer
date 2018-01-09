@@ -74,6 +74,10 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   [interactionRecognizer setDelegate:self];
   [self.view addGestureRecognizer:interactionRecognizer];
   
+  UITapGestureRecognizer *gr = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(sliderTapped:)];
+  [gr setNumberOfTapsRequired:1];
+  [self.playerControlsView.playbackPositionSlider addGestureRecognizer:gr];
+  
   UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGestureRecognizer:)];
   [singleTap setNumberOfTapsRequired:1];
   [self.view addGestureRecognizer:singleTap];
@@ -582,6 +586,55 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   }
 }
 
+- (void)sliderTapped:(UIGestureRecognizer *)g
+{
+  UISlider* slider = self.playerControlsView.playbackPositionSlider;
+  
+  CGPoint pt = [g locationInView: slider];
+  CGFloat value = slider.minimumValue + (pt.x / slider.bounds.size.width) * (slider.maximumValue - slider.minimumValue);;
+  [slider setValue:value animated:YES];
+  
+  if (![self isSeekInProgress])
+  {
+    CMTime playerDuration = [self.player.currentItem duration];
+    if (CMTIME_IS_INVALID(playerDuration))
+    {
+      return;
+    }
+    
+    double duration = CMTimeGetSeconds(playerDuration);
+    if (isfinite(duration))
+    {
+      float value = [slider value];
+      
+      double time = duration * value;
+      
+      __weak __typeof(self)weakSelf = self;
+      [self.player seekToTime:CMTimeMakeWithSeconds(time, NSEC_PER_SEC)
+            completionHandler:^(BOOL finished) {
+              if (finished)
+              {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                  [weakSelf setSeekInProgress:NO];
+                  [weakSelf syncTimeUI];
+                });
+              }
+            }];
+    }
+  }
+  
+  if (!self.periodicTimeObserver)
+  {
+    [self addPeriodicTimeObserver];
+  }
+  
+  if (self.preSeekRate)
+  {
+    [self.player setRate:self.preSeekRate];
+    [self setPreSeekRate:0.0];
+  }
+}
+
 -(void)play
 {
   if (self.seekToZeroBeforePlay)
@@ -611,8 +664,9 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   [self removePeriodicTimeObserver];
 }
 
--(IBAction)playbackSliderValueChanged:(UISlider *)sender
+-(IBAction)playbackSliderEnd:(UISlider *)sender
 {
+  
   if (![self isSeekInProgress])
   {
     CMTime playerDuration = [self.player.currentItem duration];
@@ -643,10 +697,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
             }];
     }
   }
-}
-
--(IBAction)playbackSliderEnd:(id)sender
-{
+  
   if (!self.periodicTimeObserver)
   {
     [self addPeriodicTimeObserver];
@@ -750,18 +801,18 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
                   keyPath:NSStringFromSelector(@selector(currentItem))
                   options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld)
                    action:@selector(playerCurrentItemDidChange:)];
-
+  
   [_KVOController observe:self.player
                   keyPath:NSStringFromSelector(@selector(status))
                   options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
                    action: @selector(playerStatusDidChange:)];
   
-
+  
   [_KVOController observe:self.player
                   keyPath:@"externalPlaybackActive"
                   options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
                    action: @selector(playerExternalPlaybackStateDidChange:)];
-
+  
   NSString *currentItemStatusKeypath = [NSString stringWithFormat:@"%@.%@",
                                         NSStringFromSelector(@selector(currentItem)),
                                         NSStringFromSelector(@selector(status))];
