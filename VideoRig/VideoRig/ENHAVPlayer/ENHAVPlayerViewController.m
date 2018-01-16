@@ -181,6 +181,31 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
     [self.playerControlsView.playPauseButton setEnabled:YES];
     BOOL isPlaying = self.player.rate != 0.0;
     status = (isPlaying ? ENHPlaybackButtonStatePlaybackPlaying : ENHPlaybackButtonStatePlaybackReady);
+    
+    switch (status) {
+      case ENHPlaybackButtonStatePlaybackReady:
+        if ([self.controlVisibilityDelegate respondsToSelector:@selector(playerViewController:didStopPlaying:)])
+        {
+          /*
+           ML: By design we do not want to premature change the controls during a possible drag.  Do some due
+           diligence and check first before deciding that the player stopped and calling the delegate.
+          */
+          if (_preSeekRate == 0.0f)
+          {
+            [self.playerControlsView setHidden:false];
+            [self.controlVisibilityDelegate playerViewController:self didStopPlaying:self.playerControlsView];
+          }
+        }
+        break;
+      case ENHPlaybackButtonStatePlaybackPlaying:
+        if ([self.controlVisibilityDelegate respondsToSelector:@selector(playerViewController:didStartPlaying:)])
+        {
+          [self.controlVisibilityDelegate playerViewController:self didStartPlaying:self.playerControlsView];
+        }
+        break;
+      default: { break; }
+    }
+    
   }
   else
   {

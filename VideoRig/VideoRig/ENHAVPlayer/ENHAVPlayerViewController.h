@@ -62,6 +62,11 @@ NS_ASSUME_NONNULL_BEGIN
 -(void)playerViewController:(ENHAVPlayerViewController *)playerViewController
         didHideControlsView:(ENHAVPlayerControlsView *)controlsView;
 
+-(void)playerViewController:(ENHAVPlayerViewController *)playerViewController
+            didStartPlaying:(ENHAVPlayerControlsView *)controlsView;
+
+-(void)playerViewController:(ENHAVPlayerViewController *)playerViewController
+             didStopPlaying:(ENHAVPlayerControlsView *)controlsView;
 @end
 
 @protocol ENHAVPlayerViewControllerControlFullScreenDelegate <NSObject>
