@@ -466,32 +466,24 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   [[UIApplication sharedApplication] setStatusBarHidden:goFullScreen withAnimation:UIStatusBarAnimationFade];
 #pragma clang diagnostic pop
   
-  UIDeviceOrientation deviceOrientation = [[UIDevice currentDevice] orientation];
-  CGAffineTransform transform = (self.lockFullScreenToLandscapeOrientation && goFullScreen) ? [self transformForOrientation:deviceOrientation] : CGAffineTransformIdentity;
-  
   __weak __typeof(self)weakSelf = self;
   [UIView animateWithDuration:duration
                         delay:duration
                       options:options
                    animations:^{
-                     [weakSelf.view setTransform:transform];
-                     [weakSelf.view setFrame:endRect];
-                     [weakSelf.view layoutIfNeeded];
+                     [weakSelf.view setTransform:[self transformForOrientation]];
                    } completion:^(BOOL finished) {
                      if (finished)
                      {
-                       if (!goFullScreen)
-                       {
-                         [weakSelf.view setFrame:weakSelf.hostingView.bounds];
-                         [weakSelf.hostingView addSubview:weakSelf.view];
-                       }
-                       
-                       [weakSelf setFullScreenActive:goFullScreen];
+                       BOOL fullscreen = UIDeviceOrientationIsLandscape([[UIDevice currentDevice] orientation]);
+                       [weakSelf setFullScreenActive:fullscreen];
                      }
                      [weakSelf setFullScreenTransitionInProgress:NO];
                      
                      if (weakSelf.fullScreenActive)
                      {
+                       [weakSelf.view setFrame:endRect];
+                       [weakSelf.view layoutIfNeeded];
                        if ([weakSelf.fullScreenDelegate respondsToSelector:@selector(playerViewControllerFullScreenModeDidBecomeActive:)])
                        {
                          [weakSelf.fullScreenDelegate playerViewControllerFullScreenModeDidBecomeActive:weakSelf];
@@ -499,6 +491,8 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
                      }
                      else
                      {
+                       [weakSelf.view setFrame:weakSelf.hostingView.bounds];
+                       [weakSelf.hostingView addSubview:weakSelf.view];
                        if ([weakSelf.fullScreenDelegate respondsToSelector:@selector(playerViewControllerFullScreenModeDidBecomeInactive:)])
                        {
                          [weakSelf.fullScreenDelegate playerViewControllerFullScreenModeDidBecomeInactive:weakSelf];
@@ -520,6 +514,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
     
     __weak __typeof(self)weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      UIDeviceOrientation orientation = [[UIDevice currentDevice] orientation];
       if ([weakSelf.fullScreenDelegate respondsToSelector:@selector(playerViewController:shouldChangeFullScreenModeForChangeInOrientation:)]) {
         if ([weakSelf.fullScreenDelegate playerViewController:weakSelf shouldChangeFullScreenModeForChangeInOrientation:orientation])
         {
@@ -535,34 +530,38 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   {
     if (UIDeviceOrientationIsLandscape(orientation))
     {
-      CGAffineTransform transform = [self transformForOrientation:orientation];
+      CGAffineTransform transform = [self transformForOrientation];
       
       [UIView animateWithDuration:0.3 animations:^{
         [self.view setTransform:transform];
       }];
     }
-    else if (orientation == UIDeviceOrientationPortrait)
+    else
     {
-      [self showFullscreenView:NO
-                  withDuration:0.2
-                       options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)];
+      dispatch_async(dispatch_get_main_queue(), ^{
+        [self showFullscreenView:NO withDuration:0.2 options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)];
+      });
     }
   }
 }
 
--(CGAffineTransform)transformForOrientation:(UIDeviceOrientation)orientation
+-(CGAffineTransform)transformForOrientation
 {
+  
   CGAffineTransform transform = CGAffineTransformIdentity;
-  if (self.lockFullScreenToLandscapeOrientation)
+  UIDeviceOrientation orientation = [[UIDevice currentDevice] orientation];
+  
+  switch(orientation)
   {
-    if (orientation == UIDeviceOrientationLandscapeLeft)
-    {
+    case UIDeviceOrientationLandscapeLeft:
       transform = CGAffineTransformMakeRotation(M_PI_2);
-    }
-    else
-    {
+      break;
+    case UIDeviceOrientationLandscapeRight:
       transform = CGAffineTransformMakeRotation(-M_PI_2);
-    }
+      break;
+    default:
+      transform = CGAffineTransformMakeRotation(0);
+      break;
   }
   
   return transform;
