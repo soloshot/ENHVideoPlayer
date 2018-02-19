@@ -871,11 +871,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
 -(void)playerRateDidChange:(NSDictionary *)change
 {
   [self syncPlayPauseButtons];
-  if ([self.player rate] == 0.0)
-  {
-    [self showPlayerControlsView];
-  }
-  else
+  if ([self.player rate] > 0.0)
   {
     [self deferredHidePlayerControlsView];
   }
@@ -996,6 +992,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
     if (playerItem == [player.items lastObject])
     {
       [player pause];
+      [self showPlayerControlsView];
     }
     else
     {
@@ -1005,6 +1002,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   else
   {
     [self.player pause];
+    [self showPlayerControlsView];
   }
 }
 
