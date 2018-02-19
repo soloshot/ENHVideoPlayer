@@ -418,6 +418,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
 -(void)showFullscreenView:(BOOL)goFullScreen
              withDuration:(NSTimeInterval)duration
                   options:(UIViewAnimationOptions)options
+                   sender:(id)sender
 {
   [self.playerControlsView.fullscreenModeButton setSelected:goFullScreen];
   
@@ -466,24 +467,62 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   [[UIApplication sharedApplication] setStatusBarHidden:goFullScreen withAnimation:UIStatusBarAnimationFade];
 #pragma clang diagnostic pop
   
+  CGAffineTransform transform = [self transformForOrientation];
+  BOOL isSenderFullScreenButton = [sender isEqual:_playerControlsView.fullscreenModeButton];
+  
+  /*
+   This logic is used to manually rotate the AVPlayer view to Landscape or Portrait
+   if user manully clicked on the 'Full Screen Mode' button.
+   */
+  if (isSenderFullScreenButton)
+  {
+    if (goFullScreen) {
+      transform = CGAffineTransformMakeRotation(-M_PI_2);
+    } else {
+      transform = CGAffineTransformMakeRotation(0);
+    }
+  }
   __weak __typeof(self)weakSelf = self;
   [UIView animateWithDuration:duration
                         delay:duration
                       options:options
                    animations:^{
-                     [weakSelf.view setTransform:[self transformForOrientation]];
+                     [weakSelf.view setTransform:transform];
+                     
+                     // Full Screen Mode Button Logic
+                     if (isSenderFullScreenButton)
+                     {
+                       [weakSelf.view setFrame:endRect];
+                       [weakSelf.view layoutIfNeeded];
+                     }
                    } completion:^(BOOL finished) {
                      if (finished)
                      {
-                       BOOL fullscreen = UIDeviceOrientationIsLandscape([[UIDevice currentDevice] orientation]);
-                       [weakSelf setFullScreenActive:fullscreen];
+                       // Force check the current state on finished flag.
+                       BOOL isSenderFullScreenButton = [sender isEqual:weakSelf.playerControlsView.fullscreenModeButton];
+                       if (isSenderFullScreenButton) {
+                         // IF Full Screen Mode Button pressed.
+                         if (!goFullScreen)
+                         {
+                           [weakSelf.view setFrame:weakSelf.hostingView.bounds];
+                           [weakSelf.hostingView addSubview:weakSelf.view];
+                         }
+                         [weakSelf setFullScreenActive:goFullScreen];
+                       } else {
+                         // Default Logic
+                         BOOL fullscreen = UIDeviceOrientationIsLandscape([[UIDevice currentDevice] orientation]);
+                         [weakSelf setFullScreenActive:fullscreen];
+                       }
                      }
                      [weakSelf setFullScreenTransitionInProgress:NO];
                      
                      if (weakSelf.fullScreenActive)
                      {
-                       [weakSelf.view setFrame:endRect];
-                       [weakSelf.view layoutIfNeeded];
+                       if (!isSenderFullScreenButton)
+                       {
+                         [weakSelf.view setFrame:endRect];
+                         [weakSelf.view layoutIfNeeded];
+                       }
                        if ([weakSelf.fullScreenDelegate respondsToSelector:@selector(playerViewControllerFullScreenModeDidBecomeActive:)])
                        {
                          [weakSelf.fullScreenDelegate playerViewControllerFullScreenModeDidBecomeActive:weakSelf];
@@ -491,8 +530,12 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
                      }
                      else
                      {
-                       [weakSelf.view setFrame:weakSelf.hostingView.bounds];
-                       [weakSelf.hostingView addSubview:weakSelf.view];
+                       if (!isSenderFullScreenButton)
+                       {
+                         [weakSelf.view setFrame:weakSelf.hostingView.bounds];
+                         [weakSelf.hostingView addSubview:weakSelf.view];
+                       }
+                       
                        if ([weakSelf.fullScreenDelegate respondsToSelector:@selector(playerViewControllerFullScreenModeDidBecomeInactive:)])
                        {
                          [weakSelf.fullScreenDelegate playerViewControllerFullScreenModeDidBecomeInactive:weakSelf];
@@ -521,7 +564,8 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
           BOOL shouldGoFullscreen = ![weakSelf fullScreenActive];
           [weakSelf showFullscreenView:shouldGoFullscreen
                           withDuration:0.2
-                               options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)];
+                               options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)
+                                sender:self];
         }
       }
     });
@@ -539,7 +583,7 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
     else
     {
       dispatch_async(dispatch_get_main_queue(), ^{
-        [self showFullscreenView:NO withDuration:0.2 options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)];
+        [self showFullscreenView:NO withDuration:0.2 options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState) sender:self];
       });
     }
   }
@@ -739,7 +783,8 @@ static const NSTimeInterval kENHInteractionTimeoutInterval = 3.0;
   BOOL shouldGoFullscreen = ![self.playerControlsView.fullscreenModeButton isSelected];
   [self showFullscreenView:shouldGoFullscreen
               withDuration:0.2
-                   options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)];
+                   options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)
+                    sender:sender];
 }
 
 #pragma mark - Gesture Handling
