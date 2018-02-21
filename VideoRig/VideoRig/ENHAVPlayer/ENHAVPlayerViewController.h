@@ -37,7 +37,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 -(void)showFullscreenView:(BOOL)goFullScreen
              withDuration:(NSTimeInterval)duration
-                  options:(UIViewAnimationOptions)options;
+                  options:(UIViewAnimationOptions)options
+                   sender:(id)sender;
 
 @property (nonatomic, copy, nullable) void (^playerItemStatusHandler)(AVPlayerItemStatus status);
 
