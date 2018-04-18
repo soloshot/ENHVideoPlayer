@@ -149,8 +149,8 @@ typedef void (^ENHAVAssetLoadingOperationFailureBlock)(NSError *error);
                 [weakSelf willChangeValueForKey:@"isExecuting"];
                 [weakSelf willChangeValueForKey:@"isFinished"];
                 
-                _executing = NO;
-                _finished = YES;
+                self->_executing = NO;
+                self->_finished = YES;
                 
                 [weakSelf didChangeValueForKey:@"isExecuting"];
                 [weakSelf didChangeValueForKey:@"isFinished"];
